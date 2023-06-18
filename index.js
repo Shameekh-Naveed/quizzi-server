@@ -32,6 +32,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 // Available Routes
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/courses', require('./routes/courses'));
+app.use('/api/quizes', require('./routes/quizes'));
 
 app.listen(process.env.PORT || port, () => {
 	console.log(`Example app listening on port ${port}`);

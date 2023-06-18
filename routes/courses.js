@@ -80,5 +80,34 @@ router.post('/enroll', async (req, res) => {
     }
 });
 
+router.get('/getEnrolledCourses/', async (req, res) => {
+    const userId = req.query.userId;
+    // const userId = 107;
+
+    try {
+        const query = `
+        SELECT courses.id, courses.name, COUNT(quizzes.id) AS total_quizzes
+        FROM courses
+        INNER JOIN enrollments ON courses.id = enrollments.course_id
+        LEFT JOIN quizzes ON courses.id = quizzes.course_id
+        WHERE enrollments.user_id = ?
+        GROUP BY courses.id, courses.name;
+      `;
+
+        con.query(query, [userId], (err, result) => {
+            if (err) {
+                console.log(err);
+                return res.status(500).json({ status: false, message: 'Internal Server Error' });
+            }
+
+            res.status(200).json({ status: true, courses: result });
+        });
+    } catch (err) {
+        console.log({ err });
+        return res.status(500).json({ status: false, message: 'Internal Server Error' });
+    }
+});
+
+
 
 module.exports = router;
