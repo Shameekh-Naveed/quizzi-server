@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { body, validationResult } = require('express-validator');
+const jwt = require('jsonwebtoken');
 const con = require('../db');
 
 router.get('/search', async (req, res) => {
@@ -46,12 +47,15 @@ router.get('/search', async (req, res) => {
 
 
 router.post('/enroll', async (req, res) => {
-    const { courseId, userId } = req.body;
+    const { courseId, auth_tokken } = req.body;
 
     try {
         // Check if the enrollment already exists
+        const data = jwt.verify(auth_tokken, process.env.JWT_SECRET);
+        const userID = data.user.id;
+
         const checkEnrollmentQuery = 'SELECT * FROM enrollments WHERE course_id = ? AND user_id = ?';
-        con.query(checkEnrollmentQuery, [courseId, userId], (err, result) => {
+        con.query(checkEnrollmentQuery, [courseId, userID], (err, result) => {
             if (err) {
                 console.log(err);
                 return res.status(500).json({ status: false, message: 'Internal Server Error' });
@@ -64,7 +68,7 @@ router.post('/enroll', async (req, res) => {
 
             // Create the enrollment
             const createEnrollmentQuery = 'INSERT INTO enrollments (user_id, course_id) VALUES (?, ?)';
-            con.query(createEnrollmentQuery, [userId, courseId], (err, result) => {
+            con.query(createEnrollmentQuery, [userID, courseId], (err, result) => {
                 if (err) {
                     console.log(err);
                     return res.status(500).json({ status: false, message: 'Internal Server Error' });
@@ -81,10 +85,13 @@ router.post('/enroll', async (req, res) => {
 });
 
 router.get('/getEnrolledCourses/', async (req, res) => {
-    const userId = req.query.userId;
+    const auth_tokken = req.query.userId;
     // const userId = 107;
 
     try {
+        const data = jwt.verify(auth_tokken, process.env.JWT_SECRET);
+        const userID = data.user.id;
+
         const query = `
         SELECT courses.id, courses.name, COUNT(quizzes.id) AS total_quizzes
         FROM courses
@@ -94,12 +101,11 @@ router.get('/getEnrolledCourses/', async (req, res) => {
         GROUP BY courses.id, courses.name;
       `;
 
-        con.query(query, [userId], (err, result) => {
+        con.query(query, [userID], (err, result) => {
             if (err) {
                 console.log(err);
                 return res.status(500).json({ status: false, message: 'Internal Server Error' });
             }
-
             res.status(200).json({ status: true, courses: result });
         });
     } catch (err) {
